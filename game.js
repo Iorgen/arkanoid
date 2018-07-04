@@ -1,4 +1,4 @@
-// Объект кнопки
+// Объект кнопки test github
 function Button(x, y, w, h, state, image, text,level) {
     this.x = x;
     this.y = y;
