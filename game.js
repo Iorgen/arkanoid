@@ -1,5 +1,5 @@
 // Объект кнопки
-function Button(x, y, w, h, state, image, text) {
+function Button(x, y, w, h, state, image, text,level) {
     this.x = x;
     this.y = y;
     this.w = w;
@@ -8,22 +8,10 @@ function Button(x, y, w, h, state, image, text) {
     this.imageShift = 0;
     this.image = image;
     this.text = text;
-    this.level = 1;
+    this.level = level;
 }
-
 function plays1() { var snd = new Audio("sfx_laser1.ogg"); snd.preload = "auto"; snd.play(); }
 // Получаем положение курсора мыши
-function getMousePosition(e) {
-    if (!e) {
-        var e = window.event;
-    }
-    if (e.pageX || e.pageY) {
-        return new vector2d(e.pageX, e.pageY);
-    } else if (e.clientX || e.clientY) {
-        return new vector2d(e.clientX, e.clientY);
-    }
-}
-
 var game = {
     debug_mode: false,
     width: 1280,
@@ -37,49 +25,59 @@ var game = {
     score: 0,
     blocks: [],
     buttons: [],
-
+    power_ups_count: undefined,
+    // power_ups: {
+    //     platform_function: "",
+    //     slow_ball_function: "",
+    //     two_balls: ""
+    // },
     sprites: {
         background: undefined,
         platform: undefined,
         ball: undefined,
-        block: undefined,
+        block_red: undefined,
+        block_green: undefined
     },
     drawButton: function (button) {// сделать функцией отображения меню. (фон меню + кнопки уровней)
         this.ctx.drawImage(button.image, 0, button.imageShift, button.w, button.h, button.x, button.y, button.w, button.h);
         //this.ctx.drawImage(button.image, button.x, button.y, button.w, button.h);
-        this.ctx.fillText(button.text, button.x + button.w / 2, 5 + button.y + button.h / 2);
+        this.ctx.fillText(button.text, button.x + button.w / 2.7, 5 + button.y + button.h / 2);
+    },
+    menulisten: function(){
+
     },
     init: function () {
+        // вынести как глобальную для объекта
         var canvas = document.getElementById('mycanvas');
         this.ctx = canvas.getContext("2d"); // при вызове this ссылается на стоящий слева объект
         this.ctx.font = "20px Arial";
-        //
-        this.ctx.fillStyle = '#000000';
+        this.ctx.fillStyle = '#FFCE00';
         // Сделаем загрузку. 
         this.load();
         // Выводим все кнопки
         setTimeout(function () {
+            game.ctx.drawImage(game.sprites.background, 0, 0);
             for (var ib = 0; ib < game.buttons.length; ib++) {
                 game.drawButton(game.buttons[ib]);
             }
-        }, 1000);
+            game.ctx.fillText("CHOOSE LEVEL", 500, 255);
+        }, 2000);
+        game.start(4, 10, 4 + game.buttons[0].level, 4);
         // собрать данные и стартовать игру. - в зависимости от на
-        // setTimeout(function () {
-
-        // }, 5000);
         // Обработчик события Onmousedown
-        canvas.onmousedown = function (e) {
-            var mouse = getMousePosition(e).sub(new vector2d(canvas.offsetLeft, canvas.offsetTop));
-            for (var i = 0; i < game.buttons.length; i++) { // Применяем состояние 'pressed' для кнопки
-                if (mouse.x > game.buttons[i].x && mouse.x < game.buttons[i].x + game.buttons[i].w && mouse.y > game.buttons[i].y && mouse.y < game.buttons[i].y + game.buttons[i].h) {
-                    console.log('button_press_succesfull');
-                    this.running = true;
-                    game.start(8, 17, 5);
-                    // game.buttons[i].state = 'pressed';
-                    // game.buttons[i].imageShift = 68;
-                }
-            }
-        }
+        // canvas.onmousedown = function (e) {
+        //     var mouse = getMousePosition(e).sub(new vector2d(canvas.offsetLeft, canvas.offsetTop));
+        //     for (var i = 0; i < game.buttons.length; i++) { // Применяем состояние 'pressed' для кнопки
+        //         if (mouse.x > game.buttons[i].x && mouse.x < game.buttons[i].x + game.buttons[i].w && mouse.y > game.buttons[i].y && mouse.y < game.buttons[i].y + game.buttons[i].h) {
+        //             console.log('button_press_succesfull');
+        //             this.running = true;
+        //             game.start(4, 10, 4 + game.buttons[i].level,4);
+        //             // game.buttons[i].state = 'pressed';
+        //             // game.buttons[i].imageShift = 68;
+        //         }
+        //     }
+        // }
+       
         // // Оработчик события Onmouseup
         // canvas.onmouseup = function (e) {
         //     var mouse = getMousePosition(e).sub(new vector2d(canvas.offsetLeft, canvas.offsetTop));
@@ -102,9 +100,9 @@ var game = {
             // загружать пока не загрузим
         };
 
-        this.buttons.push(new Button(400, 400, 222, 39, 'normal', buttonImage, 'Уровень 1'));
-
-        this.buttons.push(new Button(400, 480, 222, 39, 'normal', buttonImage, 'Уровень 2'));
+        this.buttons.push(new Button(480, 300, 222, 39, 'normal', buttonImage, 'Easy',1));
+        this.buttons.push(new Button(480, 380, 222, 39, 'normal', buttonImage, 'Medium',2));
+        this.buttons.push(new Button(480, 460, 222, 39, 'normal', buttonImage, 'Hard', 5));
 
         for (var key in this.sprites) {
             this.sprites[key] = new Image();
@@ -112,21 +110,26 @@ var game = {
         }
     },
     create: function () {
+        // прецизионный генератор случайных чисел для генерации объектов в игре 
         for (var row = 0; row < this.rows; row++) {
             for (var col = 0; col < this.cols; col++) {
+                // using power_ups_count - set is block got power up or not. 
                 this.blocks.push({
                     x: 70 * col + 50,
                     y: 40 * row + 35,
                     width: 64,
                     height: 32,
-                    isAlive: true
+                    isAlive: true,
+                    // power_ups.function.    
                 });
             }
         }
     },
-    start: function (rowen, columen, ball_velocity) {
+    start: function (rowen, columen, ball_velocity, power_up) {
+
         this.rows = rowen;
         this.cols = columen;
+        this.power_ups_count = power_up;
         game.ball.velocity = ball_velocity;
 
         window.addEventListener("keydown", function (e) {
@@ -141,9 +144,11 @@ var game = {
             }
             else if (e.keyCode == 38) {
                 game.debug_mode = true;
+                
+                game.BigPlatform();
             }
-
         });
+        // delete all mouse event listener 
         window.addEventListener("keyup", function (e) {
             game.platform.stop();
         });
@@ -159,7 +164,7 @@ var game = {
         this.ctx.drawImage(this.sprites.ball, this.ball.width * this.ball.frame, 0, this.ball.width, this.ball.height, this.ball.x, this.ball.y, this.ball.width, this.ball.height);
         this.blocks.forEach(function (element) {
             if (element.isAlive) {
-                this.ctx.drawImage(this.sprites.block, element.x, element.y);
+                this.ctx.drawImage(this.sprites.block_red, element.x, element.y);
             }
         }, this);
         this.ctx.lineWidth = 5;
@@ -192,7 +197,6 @@ var game = {
             }
         }, this);
         this.ball.checkBounds();
-
     },
     run: function () {
         this.update();
@@ -212,7 +216,21 @@ var game = {
         // delete all event listeners.
         this.running = false;
         window.location.reload();
-    }
+    },
+    SlowBall: function(){
+        var cur_Velocity = this.ball.velocity;
+        this.ball.velocity = cur_Velocity - 3;
+        setTimeout(function () {
+            game.ball.velocity = game.ball.velocity + 3;
+        }, 10000);
+    },
+    BigPlatform: function(){
+        this.platform.width = this.platform.width * 2;
+        setTimeout(function () {
+            game.platform.width = game.platform.width / 2;
+            console.log('not good deal');
+        }, 10000);
+    } 
 };
 game.ball = {
     width: 22,
@@ -251,7 +269,7 @@ game.ball = {
             y + this.height > element.y &&
             y < element.y + element.height
         ) {
-            if (((y + this.height + 5) < (element.y + element.height)) && (y + 5 > element.y)) {
+            if (((y + this.height + 10) < (element.y + element.height)) && (y + 10 > element.y)) {
                 this.on_the_side = true;
             }
             plays1();
@@ -301,8 +319,6 @@ game.ball = {
         }
     }
 }
-
-
 // 
 game.platform = {
     x: 600,
@@ -321,11 +337,9 @@ game.platform = {
     // ссылка на объект ball 
     move: function () {
         this.x += this.dx;
-
         if (this.ball) {
             this.ball.x += this.dx;
         }
-
     },
     stop: function () {
         this.dx = 0;
