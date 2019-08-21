@@ -62,7 +62,7 @@ var game = {
             }
             game.ctx.fillText("CHOOSE LEVEL", 500, 255);
         }, 2000);
-        game.start(4, 10, 4 + game.buttons[0].level, 4);
+        game.start(6, 17, 4 + game.buttons[0].level, 4);
         // собрать данные и стартовать игру. - в зависимости от на
         // Обработчик события Onmousedown
         // canvas.onmousedown = function (e) {
